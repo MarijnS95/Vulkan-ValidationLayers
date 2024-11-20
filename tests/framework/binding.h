@@ -509,6 +509,10 @@ class Queue : public internal::Handle<VkQueue> {
     VkResult Submit(const CommandBuffer &cmd, const TimelineSignal &signal, const Fence &fence = no_fence);
     VkResult Submit(const CommandBuffer &cmd, const TimelineWait &wait, const TimelineSignal &signal,
                     const Fence &fence = no_fence);
+    VkResult Submit(const CommandBuffer &cmd, const TimelineWait &wait, const Signal &signal,
+                    const Fence &fence = no_fence);
+    VkResult Submit(const CommandBuffer &cmd, const Wait &wait, const TimelineWait &wait2, const Signal &signal,
+                    const Fence &fence = no_fence);
 
     // vkQueueSubmit2()
     VkResult Submit2(const CommandBuffer &cmd, const Fence &fence = no_fence, bool use_khr = false);

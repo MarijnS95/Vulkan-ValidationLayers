@@ -1984,3 +1984,33 @@ TEST_F(PositiveWsi, MixKHRAndKHR2SurfaceCapsQueries2) {
 
     vkt::Swapchain swapchain(*m_device, swapchain_ci);
 }
+
+TEST_F(PositiveWsi, QueuePresentDependsOnTimelineWait) {
+    TEST_DESCRIPTION("Present semaphore wait has corresponding timeline signal");
+    SetTargetApiVersion(VK_API_VERSION_1_2);
+    AddRequiredFeature(vkt::Feature::timelineSemaphore);
+    AddSurfaceExtension();
+    RETURN_IF_SKIP(Init());
+    RETURN_IF_SKIP(InitSwapchain());
+
+    const auto images = m_swapchain.GetImages();
+    for (auto image : images) {
+        SetImageLayoutPresentSrc(image);
+    }
+
+    vkt::Semaphore timeline_semaphore(*m_device, VK_SEMAPHORE_TYPE_TIMELINE);
+    m_default_queue->Submit(vkt::no_cmd, vkt::TimelineSignal(timeline_semaphore, 1));
+
+    vkt::Semaphore acquire_semaphore(*m_device);
+    const uint32_t image_index = m_swapchain.AcquireNextImage(acquire_semaphore, kWaitTimeout);
+
+    vkt::Semaphore binary_semaphore(*m_device);
+    m_default_queue->Submit(vkt::no_cmd,
+                            vkt::Wait(acquire_semaphore),
+                            vkt::TimelineWait(timeline_semaphore, 1),
+                            vkt::Signal(binary_semaphore));
+
+    m_default_queue->Present(m_swapchain, image_index, binary_semaphore);
+
+    m_device->Wait();
+}
