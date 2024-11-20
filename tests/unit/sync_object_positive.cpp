@@ -2346,3 +2346,22 @@ TEST_F(PositiveSyncObject, KhronosTimelineSemaphoreExample) {
         t1.join();
     }
 }
+
+TEST_F(PositiveSyncObject, BinarySyncDependsOnSignaledTimelineWait) {
+    TEST_DESCRIPTION("Binary semaphore signal->wait after timeline signal-before-wait");
+    SetTargetApiVersion(VK_API_VERSION_1_3);
+    AddRequiredFeature(vkt::Feature::timelineSemaphore);
+    AddRequiredFeature(vkt::Feature::synchronization2);  // Only because Submit() lacks a (TimelineWait, Signal) overload
+    RETURN_IF_SKIP(Init());
+
+    vkt::Semaphore timeline_semaphore(*m_device, VK_SEMAPHORE_TYPE_TIMELINE);
+    vkt::Semaphore binary_semaphore(*m_device);
+
+    m_default_queue->Submit(vkt::no_cmd, vkt::TimelineSignal(timeline_semaphore, 1));
+    m_default_queue->Submit2(vkt::no_cmd, vkt::TimelineWait(timeline_semaphore, 1), vkt::Signal(binary_semaphore));
+
+    // There is a matching binary signal for this wait, and that signal depends on another already submitted timeline signal
+    m_default_queue->Submit(vkt::no_cmd, vkt::Wait(binary_semaphore));
+
+    m_default_queue->Wait();
+}
