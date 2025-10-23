@@ -558,3 +558,22 @@ TEST_F(NegativeDeviceFeatureProperty, Create14DeviceDuplicatedFeatures) {
     vk::CreateDevice(Gpu(), &m_second_device_ci, nullptr, &m_second_device);
     m_errorMonitor->VerifyFound();
 }
+
+// https://github.com/KhronosGroup/Vulkan-ValidationLayers/issues/10913
+TEST_F(NegativeDeviceFeatureProperty, UnsupportedFeaturesOnApplicationApiVersion) {
+    // TODO: Is there a VU that ensures apiVersion must be <= vkEnumerateInstanceVersion?
+    // TODO: Reduce the sample to a lower pair of versions?
+    SetTargetApiVersion(VK_API_VERSION_1_2);
+    RETURN_IF_SKIP(InitDeviceFeatureProperty());
+
+    // This structure can only be used if the application sets apiVersion to
+    // 1.3 or higher.  Without it, it promises to not use anything above what
+    // it set.
+    // TODO: Ensure that VkPhysicalDeviceProperties::apiLevel is >= 1.3
+    VkPhysicalDeviceVulkan13Features features_13 = vku::InitStructHelper();
+    m_second_device_ci.pNext = &features_13;
+    m_second_device_ci.pEnabledFeatures = nullptr;
+    m_errorMonitor->SetDesiredError("VUID-VkDeviceCreateInfo-pNext-xxx");
+    vk::CreateDevice(Gpu(), &m_second_device_ci, nullptr, &m_second_device);
+    m_errorMonitor->VerifyFound();
+}
